@@ -1,0 +1,24 @@
+[project]
+name = "spaceport-back-end"
+version = "0.1.0"
+description = "Spaceport Charter System API (FastAPI + SQLite)"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi==0.142.2",
+    "pydantic==2.13.5",
+    "uvicorn==0.54.0",
+    "aiosqlite==0.22.1",
+    "tzdata==2026.4",  # IANA time-zone data for zoneinfo on Windows (Linux/macOS use the OS copy)
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "httpx==0.28.1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]                               # tests import the top-level modules directly
+asyncio_mode = "auto"                            # async tests/fixtures need no markers
+asyncio_default_fixture_loop_scope = "function"
