@@ -56,6 +56,7 @@ D = (2026, 10, 5)
         (ct(*D, OPEN.hour), ct(*D, CLOSE.hour), True),
         (utc(2026, 10, 5, 11), utc(2026, 10, 5, 12), True),
         (ct(2026, 11, 1, OPEN.hour), ct(2026, 11, 1, OPEN.hour + 1), True),
+        (utc(2026, 10, 6, 2), utc(2026, 10, 6, 3), True),
         (ct(*D, OPEN.hour - 1, 59), ct(*D, OPEN.hour + 1), False),
         (ct(*D, CLOSE.hour - 1), ct(*D, CLOSE.hour, 1), False),
         (ct(*D, CLOSE.hour - 1), ct(2026, 10, 6, 1), False),
@@ -64,7 +65,7 @@ D = (2026, 10, 5)
     ],
     ids=[
         "open-hour", "ends-at-close", "full-day", "utc-input-equals-open",
-        "dst-day", "starts-before-open", "ends-after-close", "spans-midnight",
+        "dst-day", "utc-evening-crosses-utc-midnight", "starts-before-open", "ends-after-close", "spans-midnight",
         "zero-length", "end-before-start",
     ],
 )
