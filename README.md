@@ -4,8 +4,8 @@ This is my submission for the Spaceport Charter System take-home. The original b
 [`ASSIGNMENT.md`](ASSIGNMENT.md). It is a FastAPI + SQLite back end and a React + TypeScript
 front end with the two screens the brief asks for: **Charter a Ship** (pick a ship, date and
 duration, see which start times are unavailable, book one) and the **Fleet Dashboard** (every
-booking, grouped by ship). The server enforces every booking rule. The browser has no rule logic
-of its own.
+booking, grouped by ship). The server enforces every booking rule. The browser has no booking-rule
+logic of its own.
 
 ## Quick start
 
@@ -201,9 +201,19 @@ day or the request.
 That statement takes SQLite's write lock *before* the check. A second request for the same slot waits
 for the lock (the sqlite3 busy timeout, 5 s by default), then sees the first booking and gets a 409.
 `test_concurrent_bookings_cannot_double_book` sends two identical requests at once and expects exactly
-one 201 and one 409. I also ran it live against a seeded database: five simultaneous identical POSTs
-gave one 201 and four 409s. Double-booking is always caught. If a request ever waited longer than the
-5-second timeout, it would fail with a 500 rather than book.
+one 201 and one 409. To see it live, run this in bash while the back end is running. It sends five
+identical POSTs at once for 2027-01-15, a future date with no seed bookings:
+
+```bash
+seq 5 | xargs -P5 -I{} curl -s -o /dev/null -w '%{http_code}\n' -X POST \
+  -H 'Content-Type: application/json' \
+  -d '{"shipId":2,"pilotName":"Race","startTime":"2027-01-15T10:00:00-06:00","endTime":"2027-01-15T11:00:00-06:00"}' \
+  http://127.0.0.1:8000/api/bookings | sort | uniq -c
+```
+
+It counts one 201 and four 409s. Running it again gives five 409s, because the slot is now taken.
+Double-booking is always caught. If a request ever waited longer than the 5-second timeout, it would
+fail with a 500 rather than book.
 
 ## Design decisions
 
@@ -211,7 +221,7 @@ gave one 201 and four 409s. Double-booking is always caught. If a request ever w
 |---|---|---|
 | FastAPI + Pydantic v2 | Typed models give validation and OpenAPI docs with little code. What Pydantic does here: `CamelModel` keeps Python snake_case and JSON camelCase. `AwareDatetime` rejects timestamps without an offset. The `check_times` validator on `BookingCreate` serves both the API and the seed loader. `CentralTime` converts every outgoing time to Central. | Validation errors use FastAPI's default 422 format, which is verbose. |
 | SQLite + raw `aiosqlite`, no ORM | Nothing to set up (the database is one file), and every query is easy to read. `db.py` has five queries plus the schema, and the loader adds its table drops and a ships insert. | One writer at a time. No time-zone type, so I store UTC text. No migrations. |
-| Slots computed on the server | The brief requires it. Availability returns every candidate start with an `available` flag. The client has no rule logic and posts the chosen slot's own `start`/`end` strings back unchanged, so it never builds a timestamp. | One request each time the ship, date or duration changes. |
+| Slots computed on the server | The brief requires it. Availability returns every candidate start with an `available` flag. The client has no booking-rule logic and posts the chosen slot's own `start`/`end` strings back unchanged, so it never builds a timestamp. | One request each time the ship, date or duration changes. |
 | 30-minute start grid plus a duration (30 min to 4 h in the UI) | It matches the seed, where every time is on the hour or half hour. POST does not require grid alignment because the rules work on continuous time. | The UI offers no free-form start times. |
 | Any date is bookable, including past dates | The brief doesn't forbid past dates. Blocking them would be one more 422 check. | You can book yesterday. |
 | React + TypeScript + plain CSS, no router or state library | There are only two screens, and one `useState` picks the tab. | No deep links to a screen. |
@@ -243,8 +253,10 @@ npm run build      # tsc type-check, then Vite production build
 npm run lint       # oxlint
 ```
 
-The front end has no unit tests. I checked the whole flow end to end by driving the real app in a
-browser. There is no automated end-to-end suite yet.
+The front end has no unit tests. Instead I drove the running app in Chrome: a booked slot and its 30-minute
+buffer became unavailable, an exactly-30-minute gap was accepted, the 409 banner showed, the 2026-11-01
+(DST) grid started at 6:00 AM CST, the dashboard showed new bookings newest first, the Charter screen never
+requested `/api/fleet`, and the console had no errors. A fresh clone built and tested green. No automated E2E suite yet.
 
 ## What I'd do next
 
@@ -253,10 +265,12 @@ browser. There is no automated end-to-end suite yet.
 - Add a date filter and pagination to the dashboard, with upcoming and past bookings separated.
 - Move to Postgres and let the database enforce no-overlap-plus-buffer itself with an exclusion
   constraint. As I understand it, that would need the `btree_gist` extension (to combine
-  `ship_id WITH =` with range overlap). It would also need a stored `ready_at = end + buffer` column,
-  because `timestamptz + interval` isn't immutable and so can't be used directly in the constraint.
-  I haven't built or tested this.
-- Alembic migrations instead of `CREATE TABLE IF NOT EXISTS`.
+  `ship_id WITH =` with range overlap). The buffer also has to go into the range, and
+  `timestamptz + interval` isn't immutable, so it can't be used directly in the constraint. One way
+  is a stored `ready_at = end + buffer` column. Another is to store UTC `timestamp` values, where
+  `+ interval` is immutable and can go straight into the range expression. I haven't built or tested
+  this.
+- A migration tool instead of `CREATE TABLE IF NOT EXISTS` (e.g. Alembic, alongside the Postgres move).
 - CI that runs `pytest`, the front-end build and the linter.
 - Playwright end-to-end tests for the booking flow.
 - Show *why* a slot is unavailable: booked, or inside a refuel buffer.
@@ -270,5 +284,7 @@ browser. There is no automated end-to-end suite yet.
 The brief says AI tools are permitted and expected. I built this with Claude Code (Anthropic) as an AI
 pair programmer. I made the product and design decisions: the deliberately small scope, the booking UX
 (a start slot plus a duration), loading the seed as-is, and approving the UI mockup before it was
-built. The AI drafted code against a written plan, one task at a time. Each task had its own tests and
-review, and I reviewed the results. I can walk through and justify every line.
+built. The AI drafted code against a written plan, one task at a time. The back-end tasks each came
+with their own tests. Every task was reviewed separately against its brief, with the front end checked
+by build, lint and an end-to-end run in a real browser. I reviewed the results. I can walk through and
+justify every line.
