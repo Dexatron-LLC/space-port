@@ -1,7 +1,7 @@
 /**
  * Fleet Dashboard screen: every ship as a collapsible section listing all of its bookings,
  * newest first, exactly as the server orders them. Markup, class names, icons and copy follow
- * the approved design artboards (Dashboard / Dashboard-mobile in the Claude Design canvas).
+ * the approved UI mockups (designed in Claude Design; not part of this repo).
  * Data comes from `api.ts` and every time is formatted by `time.ts`.
  */
 import { useEffect, useState, type ReactNode } from 'react'
@@ -23,7 +23,10 @@ export default function FleetScreen() {
     let ignore = false
     getFleet()
       .then((data) => {
-        if (!ignore) setFleet(data)
+        if (ignore) return
+        // An empty fleet means the seed was not loaded before the server started.
+        if (data.length === 0) setLoadError("No ships found. Load the seed data first (see the README's Quick start).")
+        else setFleet(data)
       })
       .catch((err: unknown) => {
         if (ignore) return

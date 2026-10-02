@@ -1,7 +1,7 @@
 /**
  * Charter a Ship screen: pick a ship, date and duration, choose one of the start times the
  * server offers, enter a pilot name and book. Markup, class names, icons and copy follow the
- * approved design artboards (Main / Charter-mobile / State-* in the Claude Design canvas).
+ * approved UI mockups (designed in Claude Design; not part of this repo).
  *
  * The server owns every rule. This screen only shows the slots it is given and posts a chosen
  * slot back; it never computes availability (so it never asks for the full fleet's bookings)
@@ -73,6 +73,9 @@ export default function CharterScreen() {
         if (ignore) return
         setShips(list)
         setShipId(list[0]?.id ?? null)
+        // An empty list means the seed was not loaded before the server started; say so
+        // rather than leave the start-times card on "Loading start times…" forever.
+        if (list.length === 0) setLoadError("No ships found. Load the seed data first (see the README's Quick start).")
       })
       .catch((err: unknown) => {
         if (!ignore) setLoadError(loadErrorMessage(err))

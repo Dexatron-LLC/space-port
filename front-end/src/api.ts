@@ -56,6 +56,9 @@ function errorMessage(body: unknown, fallback: string): string {
   return fallback
 }
 
+/** Fallback for a 5xx with no `detail`: the Vite dev proxy answers an empty 502 when the back end is down. */
+const SERVER_DOWN = 'Could not reach the server. Please try again.'
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, init)
   if (!res.ok) {
@@ -63,9 +66,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     try {
       body = await res.json()
     } catch {
-      // Non-JSON error body: fall back to the status text.
+      // Non-JSON error body: fall back to the status text (or the 5xx message).
     }
-    throw new ApiError(res.status, errorMessage(body, res.statusText))
+    const fallback = res.status >= 500 ? SERVER_DOWN : res.statusText
+    throw new ApiError(res.status, errorMessage(body, fallback))
   }
   return (await res.json()) as T
 }

@@ -1,5 +1,6 @@
-/* Spaceport Charter System: global styles ported from the approved Claude Design stylesheet.
-   Plain CSS, mobile-first, tokens in :root. Canvas-only rules and forced-state selectors removed. */
+/* Spaceport Charter System: global styles ported from the approved UI mockups'
+   stylesheet (designed in Claude Design; not part of this repo). Plain CSS, mobile-first,
+   tokens in :root. Design-tool-only rules and forced-state selectors removed. */
 
 :root {
   --color-bg: #f3f5f8;
