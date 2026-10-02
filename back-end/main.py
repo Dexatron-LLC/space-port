@@ -89,8 +89,9 @@ async def create_booking(booking: BookingCreate, conn: Conn) -> BookingOut:
     ship = await require_ship(conn, booking.ship_id)  # 404 for an unknown ship
     # BEGIN IMMEDIATE takes the write lock BEFORE the conflict check, so the
     # check and the insert are atomic: a concurrent request for the same slot
-    # waits on SQLite's busy timeout, then sees this booking and gets a 409,
-    # instead of both passing the check and double-booking the ship.
+    # waits on SQLite's busy timeout (the sqlite3 default, 5 s), then sees this
+    # booking and gets a 409, instead of both passing the check and
+    # double-booking the ship.
     async with db.immediate_transaction(conn):
         # Only bookings within one buffer of the request can conflict with it.
         nearby = await db.bookings_between(
@@ -118,8 +119,9 @@ async def get_fleet(conn: Conn) -> list[FleetShip]:
     pagination: the whole fleet's bookings (a few thousand rows) are small.
     """
     ships = await db.list_ships(conn)
-    # Two queries grouped in Python: simpler than a JOIN, and keeps ships
-    # that have no bookings.
+    # Two queries grouped in Python: simpler than reshaping a LEFT JOIN's flat
+    # rows; every ship starts with an empty list, so ships with no bookings
+    # are kept.
     by_ship = {s["id"]: [] for s in ships}
     for row in await db.list_bookings(conn):
         by_ship[row["ship_id"]].append(BookingOut.model_validate(dict(row)))

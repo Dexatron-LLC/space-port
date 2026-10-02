@@ -13,6 +13,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'fleet', label: 'Fleet Dashboard' },
 ]
 
+/** The root component: header, tab bar and whichever screen the selected tab shows. */
 export default function App() {
   const [tab, setTab] = useState<Tab>('charter')
 

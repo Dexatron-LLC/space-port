@@ -1,3 +1,5 @@
+// Vite config: the React plugin, plus a proxy that forwards `/api` requests from the dev
+// server (and `vite preview`, which inherits it) to the FastAPI back-end on port 8000.
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 

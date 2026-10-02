@@ -79,8 +79,8 @@ def has_conflict(
         True if the proposal overlaps an existing booking or leaves less than
         BUFFER between them on either side.
     """
-    # Padding each booking's end by the buffer turns "no overlap AND at least a
-    # 30-minute gap" into one half-open interval-overlap test. It covers
+    # Padding each booking's end by the buffer turns "no overlap AND a gap of
+    # at least BUFFER" into one half-open interval-overlap test. It covers
     # overlap, touching, and the buffer on both sides. A gap of exactly BUFFER
     # is allowed because the comparisons are strict (<).
     return any(

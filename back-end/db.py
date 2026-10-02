@@ -129,7 +129,7 @@ async def insert_booking(
 
 
 async def list_bookings(conn: aiosqlite.Connection) -> list[aiosqlite.Row]:
-    """Return every booking, grouped by ship and newest first within each ship."""
+    """Return every booking, sorted by ship and newest first within each ship."""
     # start_time is fixed-width UTC text, so text order DESC is newest first.
     async with conn.execute(
         "SELECT id, ship_id, pilot_name, start_time, end_time FROM bookings "
