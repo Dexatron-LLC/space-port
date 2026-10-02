@@ -1,0 +1,17 @@
+# Local tooling (not part of the project)
+.kanban-engine.lock
+
+# Generated seed data — regenerate with `python seed.py > seed.json` (dates shift with the run day)
+seed.json
+
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+
+# SQLite database
+*.db
+
+# Node
+node_modules/
+dist/
