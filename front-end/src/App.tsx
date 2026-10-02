@@ -1,9 +1,10 @@
 /**
  * App shell: the navy header (orbit mark + product name), the two-tab navigation and the
  * current screen. There is no router; a single piece of state picks the screen.
- * The screens below are placeholders until CharterScreen / FleetScreen replace them.
  */
 import { useState } from 'react'
+import CharterScreen from './CharterScreen'
+import FleetScreen from './FleetScreen'
 
 type Tab = 'charter' | 'fleet'
 
@@ -43,11 +44,8 @@ export default function App() {
         </div>
       </header>
       <main className="page">
-        {tab === 'charter' ? (
-          <h1 className="page-title">Charter a Ship</h1>
-        ) : (
-          <h1 className="page-title">Fleet Dashboard</h1>
-        )}
+        {/* Only the current screen is mounted, so the dashboard re-fetches on every visit. */}
+        {tab === 'charter' ? <CharterScreen /> : <FleetScreen />}
       </main>
     </div>
   )

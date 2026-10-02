@@ -133,6 +133,7 @@ a { color: var(--color-accent); }
 .ship[open] > .ship__summary .icon { transform: rotate(90deg); }
 .ship__name { font-size: 17px; font-weight: 700; }
 .ship__count { font-size: 15px; color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+.ship__empty { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--color-border); font-size: 15px; color: var(--color-text-muted); }
 .table-scroll { max-height: 400px; overflow-y: auto; border-top: 1px solid var(--color-border); }
 .table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
 .table th { position: sticky; top: 0; z-index: 1; padding: 10px var(--space-3); text-align: left; font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-muted); background: var(--color-surface); box-shadow: inset 0 -1px 0 var(--color-border-strong); }
@@ -152,6 +153,7 @@ a { color: var(--color-accent); }
   .field--wide { grid-column: auto; }
   .slots { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .ship__summary { padding: 0 var(--space-5); }
+  .ship__empty { padding: var(--space-3) var(--space-5); }
   .table { font-size: 15px; }
   .table th, .table td { padding: 11px var(--space-5); }
   .col-date { width: 220px; }
