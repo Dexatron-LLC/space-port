@@ -133,36 +133,38 @@ export default function CharterScreen() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!ready || submitting || shipId === null || selected === null) return
-    // Capture what is being booked now: the inputs may change while the request is in flight.
-    const slot = selected
+    // State is this render's snapshot, so these stay the booked slot's values even if the user
+    // changes inputs mid-request.
     const pilot = pilotName.trim()
-    const ship = shipName
     setSubmitting(true)
     try {
       // The slot's own `start`/`end` strings are posted back verbatim, so the client never
       // builds a timestamp and cannot shift a booking by a time-zone mistake.
-      await createBooking({ shipId, pilotName: pilot, startTime: slot.start, endTime: slot.end })
+      await createBooking({
+        shipId,
+        pilotName: pilot,
+        startTime: selected.start,
+        endTime: selected.end,
+      })
       setBanner({
         kind: 'success',
-        text: `${ship}, ${formatTimeRange(slot.start, slot.end)} ${zoneAbbreviation(slot.start)} for ${pilot}`,
+        text: `${shipName}, ${formatTimeRange(selected.start, selected.end)} ${zoneAbbreviation(selected.start)} for ${pilot}`,
       })
       setPilotName('')
-      // Re-fetch so the new booking and its refuel buffer show as unavailable.
-      clearSlots()
-      setReloadKey((key) => key + 1)
     } catch (err) {
-      if (err instanceof ApiError) {
-        // 409 conflict (someone else got there first), 422 or 404: show the server's reason,
-        // keep the pilot name so the user can pick another time, and re-fetch the slots.
-        setBanner({ kind: 'error', text: err.message })
-        clearSlots()
-        setReloadKey((key) => key + 1)
-      } else {
-        // Network failure or unreadable response: keep everything so the user can retry.
-        setBanner({ kind: 'error', text: 'Something went wrong. Please try again.' })
-      }
+      // An ApiError (409 conflict, 422, 404) carries the server's reason. Anything else (network
+      // failure, unreadable response) is vaguer on purpose: the booking may have gone through.
+      // The pilot name is kept so the user can pick another time straight away.
+      setBanner({
+        kind: 'error',
+        text: err instanceof ApiError ? err.message : 'Something went wrong. Please try again.',
+      })
     } finally {
       setSubmitting(false)
+      // Re-fetch after every outcome: a success (or an error after the POST landed) adds the
+      // booking and its refuel buffer as unavailable; a conflict shows what is taken now.
+      clearSlots()
+      setReloadKey((key) => key + 1)
     }
   }
 
