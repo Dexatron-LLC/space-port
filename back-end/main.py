@@ -10,7 +10,7 @@ from fastapi import Depends, FastAPI, HTTPException, Query
 
 import db
 import rules
-from schemas import Ship, Slot
+from schemas import BookingCreate, BookingOut, FleetShip, Ship, Slot
 
 
 @asynccontextmanager
@@ -67,3 +67,60 @@ async def get_availability(
         Slot(start=s, end=e, available=a)
         for s, e, a in rules.day_slots(day, timedelta(minutes=duration_minutes), booked)
     ]
+
+
+@app.post("/api/bookings", status_code=201)
+async def create_booking(booking: BookingCreate, conn: Conn) -> BookingOut:
+    """Book a ship, unless it conflicts with the ship's existing bookings.
+
+    Args:
+        booking: The requested booking, already validated by Pydantic.
+        conn: Database connection (injected).
+
+    Returns:
+        The stored booking, with its new id.
+
+    Raises:
+        HTTPException: 404 if the ship does not exist; 409 if the booking
+            overlaps another booking on the ship or its refuel buffer.
+    """
+    # By now Pydantic has already answered 422 for input that is invalid
+    # whatever is stored (bad times, outside hours, bad pilot name).
+    ship = await require_ship(conn, booking.ship_id)  # 404 for an unknown ship
+    # BEGIN IMMEDIATE takes the write lock BEFORE the conflict check, so the
+    # check and the insert are atomic: a concurrent request for the same slot
+    # waits on SQLite's busy timeout, then sees this booking and gets a 409,
+    # instead of both passing the check and double-booking the ship.
+    async with db.immediate_transaction(conn):
+        # Only bookings within one buffer of the request can conflict with it.
+        nearby = await db.bookings_between(
+            conn, booking.ship_id, booking.start_time - rules.BUFFER, booking.end_time + rules.BUFFER
+        )
+        if rules.has_conflict(booking.start_time, booking.end_time, nearby):
+            # 409, not 422: the input is valid, but it conflicts with stored
+            # bookings. Raising inside the block rolls the transaction back.
+            raise HTTPException(
+                409,
+                f"{ship['name']} is not available then: it overlaps another booking "
+                f"or its {rules.BUFFER // timedelta(minutes=1)}-minute refuel buffer.",
+            )
+        booking_id = await db.insert_booking(
+            conn, booking.ship_id, booking.pilot_name, booking.start_time, booking.end_time
+        )
+    return BookingOut(id=booking_id, **booking.model_dump())
+
+
+@app.get("/api/fleet")
+async def get_fleet(conn: Conn) -> list[FleetShip]:
+    """List every ship in id order with all of its bookings, newest first.
+
+    Ships with no bookings are included with an empty list. No filters or
+    pagination: the whole fleet's bookings (a few thousand rows) are small.
+    """
+    ships = await db.list_ships(conn)
+    # Two queries grouped in Python: simpler than a JOIN, and keeps ships
+    # that have no bookings.
+    by_ship = {s["id"]: [] for s in ships}
+    for row in await db.list_bookings(conn):
+        by_ship[row["ship_id"]].append(BookingOut.model_validate(dict(row)))
+    return [FleetShip(id=s["id"], name=s["name"], bookings=by_ship[s["id"]]) for s in ships]

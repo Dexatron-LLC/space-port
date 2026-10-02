@@ -83,3 +83,21 @@ class Slot(CamelModel):
     start: CentralTime
     end: CentralTime
     available: bool
+
+
+class BookingOut(CamelModel):
+    """A stored booking, as returned by the API."""
+
+    # Deliberately does not re-run the booking rules (unlike BookingCreate):
+    # existing bookings must still render if the rules change later.
+    id: int
+    ship_id: int
+    pilot_name: str
+    start_time: CentralTime
+    end_time: CentralTime
+
+
+class FleetShip(Ship):
+    """A ship with all of its bookings, newest first (the fleet dashboard)."""
+
+    bookings: list[BookingOut]

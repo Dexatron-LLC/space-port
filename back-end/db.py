@@ -74,6 +74,7 @@ async def immediate_transaction(conn: aiosqlite.Connection) -> AsyncIterator[Non
     await conn.execute("BEGIN IMMEDIATE")
     try:
         yield
+    # BaseException, not Exception: a cancelled request (asyncio.CancelledError) must also roll back.
     except BaseException:
         await conn.execute("ROLLBACK")
         raise
@@ -120,8 +121,18 @@ async def insert_booking(
     conn: aiosqlite.Connection, ship_id: int, pilot_name: str, start: datetime, end: datetime
 ) -> int:
     """Insert a booking and return its new id."""
-    cur = await conn.execute(
+    async with conn.execute(
         "INSERT INTO bookings (ship_id, pilot_name, start_time, end_time) VALUES (?, ?, ?, ?)",
         (ship_id, pilot_name, to_db(start), to_db(end)),
-    )
-    return cur.lastrowid
+    ) as cur:
+        return cur.lastrowid
+
+
+async def list_bookings(conn: aiosqlite.Connection) -> list[aiosqlite.Row]:
+    """Return every booking, grouped by ship and newest first within each ship."""
+    # start_time is fixed-width UTC text, so text order DESC is newest first.
+    async with conn.execute(
+        "SELECT id, ship_id, pilot_name, start_time, end_time FROM bookings "
+        "ORDER BY ship_id, start_time DESC"
+    ) as cur:
+        return list(await cur.fetchall())
