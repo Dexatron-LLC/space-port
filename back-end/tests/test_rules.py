@@ -102,13 +102,16 @@ def test_has_conflict(start, end, booked, expected):
 
 
 @pytest.mark.parametrize(
-    "duration, count",
+    "duration, open_count",
     [(timedelta(minutes=60), 31), (timedelta(minutes=30), 32), (timedelta(hours=16, minutes=30), 0)],
     ids=["60min", "30min", "longer-than-day"],
 )
-def test_day_slots_grid(duration, count):
+def test_day_slots_grid(duration, open_count):
+    # Every start from 06:00 to 22:00 is listed whatever the duration; only
+    # those that end by closing are available.
     slots = day_slots(date(2026, 10, 5), duration, [])
-    assert len(slots) == count
+    assert len(slots) == 33
+    assert sum(s[2] for s in slots) == open_count
 
 
 def test_day_slots_grid_shape():
@@ -116,10 +119,12 @@ def test_day_slots_grid_shape():
     open_, close = operating_window(day)
     slots = day_slots(day, timedelta(minutes=60), [])
     assert slots[0][0] == open_
-    assert slots[-1][1] == close
+    assert slots[-1][0] == close
     starts = [s[0] for s in slots]
     assert all(b - a == SLOT_STEP for a, b in zip(starts, starts[1:]))
-    assert all(s[2] for s in slots)
+    # The last available slot ends exactly at closing; the ones after run past it.
+    assert [s[2] for s in slots[-3:]] == [True, False, False]
+    assert slots[-3][1] == close
 
 
 def test_day_slots_marks_booking_and_buffer():
@@ -127,7 +132,8 @@ def test_day_slots_marks_booking_and_buffer():
     slots = day_slots(day, timedelta(minutes=60), [(ct(*D, 14), ct(*D, 16))])
     unavailable = [s[0] for s in slots if not s[2]]
     expected = [ct(*D, 13), ct(*D, 13, 30), ct(*D, 14), ct(*D, 14, 30),
-                ct(*D, 15), ct(*D, 15, 30), ct(*D, 16)]
+                ct(*D, 15), ct(*D, 15, 30), ct(*D, 16),
+                ct(*D, 21, 30), ct(*D, 22)]  # would end past closing
     assert unavailable == [e.astimezone(UTC) for e in expected]
     available = {s[0] for s in slots if s[2]}
     assert ct(*D, 12, 30).astimezone(UTC) in available

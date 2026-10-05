@@ -18,7 +18,7 @@ from zoneinfo import ZoneInfo
 TZ = ZoneInfo("America/Chicago")   # the spaceport's local time zone (DST-aware)
 OPEN = time(6, 0)                  # opening time, Central wall clock
 CLOSE = time(22, 0)                # closing time, Central wall clock
-BUFFER = timedelta(minutes=30)     # minimum refuelling gap between bookings on one ship
+BUFFER = timedelta(minutes=30)     # refuelling gap between bookings on one ship
 SLOT_STEP = timedelta(minutes=30)  # spacing of offered start times
 
 
@@ -102,16 +102,19 @@ def day_slots(
         booked: The ship's existing ``(start, end)`` bookings.
 
     Returns:
-        ``(start, end, available)`` tuples in UTC, in start order, stepping by
-        SLOT_STEP from opening while the slot still ends by closing. Empty if
-        the duration does not fit in the day.
+        ``(start, end, available)`` tuples in UTC, in start order, one for
+        every SLOT_STEP from opening to closing inclusive. The grid is the same
+        whatever the duration; a slot that would run past closing is listed as
+        unavailable. The closing-time slot is therefore never available, but it
+        shows the day's full span.
     """
     booked = list(booked)  # iterated once per slot, so materialise it
     open_, close = operating_window(day)
     slots = []
     start = open_
-    while start + duration <= close:
+    while start <= close:
         end = start + duration
-        slots.append((start, end, not has_conflict(start, end, booked)))
+        available = end <= close and not has_conflict(start, end, booked)
+        slots.append((start, end, available))
         start += SLOT_STEP
     return slots

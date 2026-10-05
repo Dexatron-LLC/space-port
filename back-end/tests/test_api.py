@@ -51,10 +51,13 @@ async def test_availability(client):
     r = await client.get("/api/ships/2/availability", params={"date": "2026-10-05", "durationMinutes": 60})
     assert r.status_code == 200
     slots = r.json()
-    assert len(slots) == 31
+    assert len(slots) == 33
     assert slots[0] == {"start": "2026-10-05T06:00:00-05:00", "end": "2026-10-05T07:00:00-05:00", "available": True}
     blocked = [s["start"] for s in slots if not s["available"]]
-    assert blocked == [f"2026-10-05T{t}:00-05:00" for t in ("13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00")]
+    assert blocked == [f"2026-10-05T{t}:00-05:00" for t in (
+        "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00",
+        "21:30", "22:00",  # would end past closing
+    )]
 
 
 async def test_availability_errors(client):
@@ -91,7 +94,7 @@ async def test_create_booking(client):
     blocked = [s["start"] for s in r.json() if not s["available"]]
     assert blocked == [f"2026-10-05T{t}:00-05:00" for t in (
         "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00",
-        "17:00", "17:30", "18:00", "18:30", "19:00",
+        "17:00", "17:30", "18:00", "18:30", "19:00", "21:30", "22:00",
     )]
 
 

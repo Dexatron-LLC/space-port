@@ -8,7 +8,8 @@ dependencies = [
     "pydantic==2.13.5",
     "uvicorn==0.54.0",
     "aiosqlite==0.22.1",
-    "tzdata==2026.4",  # IANA time-zone data for zoneinfo on Windows (Linux/macOS use the OS copy)
+    "tzdata==2026.4", # IANA time-zone data for zoneinfo on Windows (Linux/macOS use the OS copy)
+    "pytest>=9.1.1",
 ]
 
 [dependency-groups]
